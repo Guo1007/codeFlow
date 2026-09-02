@@ -8,7 +8,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
       MYSQL_DATABASE: codeflow
       TZ: Asia/Shanghai
-    # 端口仅供本地排查用；如服务器端口被占用可改右边宿主端口或去掉
+    # 端口仅供本地排查用；3306 未被占用，保持默认
     ports:
       - "3306:3306"
     volumes:
@@ -33,6 +33,7 @@ services:
     image: redis:7-alpine
     container_name: codeflow-redis
     restart: always
+    # 6379 未被占用，保持默认
     ports:
       - "6379:6379"
     volumes:
@@ -73,8 +74,9 @@ services:
       - ./projects:/projects
       # 服务器专属配置（agent.targets 等）
       - ./config:/app/config
+    # 宿主端口 8082：避开 FurnitureSystem 后端占用 8080（容器内部仍为 8080，由 nginx 反代）
     ports:
-      - "8080:8080"
+      - "8082:8080"
 
   # ==================== Nginx 前端 ====================
   frontend:
@@ -85,9 +87,9 @@ services:
     restart: always
     depends_on:
       - backend
-    # 对外暴露 80 端口访问前端
+    # 宿主端口 8888：避开 FurnitureSystem 前端占用的 80/8880（容器内 Nginx 仍监听 80）
     ports:
-      - "80:80"
+      - "8888:80"
 
 volumes:
   mysql-data:
