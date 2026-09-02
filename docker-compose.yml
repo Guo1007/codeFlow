@@ -1,3 +1,5 @@
+name: codeflow
+
 services:
   # ==================== MySQL ====================
   mysql:

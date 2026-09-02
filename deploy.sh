@@ -35,11 +35,12 @@ if ! command -v docker &> /dev/null; then
 fi
 
 echo "🔨 构建镜像..."
-# 复用依赖下载层缓存，加快部署
-docker compose build
+# 显式指定 compose 项目名 codeflow，与同机其他项目（如 furniture）区分，互不影响
+echo "   项目名: codeflow（容器前缀 codeflow-*）"
+docker compose -p codeflow build
 
 echo "🚀 启动服务..."
-docker compose up -d
+docker compose -p codeflow up -d
 
 echo ""
 echo "=========================================="
@@ -51,9 +52,10 @@ echo "  后端 API: http://服务器IP:8082"
 echo "  MySQL:    localhost:3306"
 echo "  Redis:    localhost:6379"
 echo ""
-echo "  查看日志: docker compose logs -f"
-echo "  停止服务: docker compose down"
-echo "  重启服务: docker compose restart"
+echo "  codeFlow 专属命令（compose 项目名 = codeflow，照此运行，不与家具/其他 compose 冲突）："
+echo "  查看日志: docker compose -p codeflow logs -f"
+echo "  停止服务: docker compose -p codeflow down"
+echo "  重启服务: docker compose -p codeflow restart"
 echo ""
 echo "  目标项目: 把项目放到 ./projects 目录，打开页面在「AI 对话」中让 AI 接入，或在「代码生成」页签选择"
 echo ""
