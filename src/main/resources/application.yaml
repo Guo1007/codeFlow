@@ -7,6 +7,7 @@ spring:
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   # Redis：聊天记忆（多轮对话上下文）存储
   data:
     redis:
