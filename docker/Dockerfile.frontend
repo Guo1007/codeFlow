@@ -1,0 +1,35 @@
+# ========== 阶段1: 构建 ==========
+FROM node:20-alpine AS builder
+WORKDIR /build
+
+# 使用国内 npm 镜像加速
+RUN npm config set registry https://registry.npmmirror.com
+
+# 先复制依赖文件，利用缓存
+COPY ai-dev-agent-ui/package.json ai-dev-agent-ui/package-lock.json ./
+RUN npm ci
+
+# 补充 @types/node：项目 vite.config.ts 使用 node:url 与 import.meta.url，缺它 vue-tsc 类型检查会失败导致构建不过
+RUN npm i -D @types/node
+
+# 复制源码并构建
+COPY ai-dev-agent-ui/ .
+RUN npm run build
+
+# ========== 阶段2: Nginx 运行 ==========
+# 固定 nginx:1.25-alpine：1.31 在 CentOS7 老内核(3.10) 容器中写 pid 文件会报 pwrite 无权限
+FROM nginx:1.25-alpine
+
+# 新版 nginx 默认将 pid 写入 /run/nginx.pid，在 CentOS7 老内核容器中会因 pwrite 无权限启动失败；
+# 删掉所有 pid 指令，统一追加到可写的 /tmp 路径
+RUN sed -i '/^pid /d' /etc/nginx/nginx.conf \
+    && printf 'pid /tmp/nginx.pid;\n' >> /etc/nginx/nginx.conf
+
+RUN rm /etc/nginx/conf.d/default.conf
+
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /build/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

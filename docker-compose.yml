@@ -1,0 +1,94 @@
+services:
+  # ==================== MySQL ====================
+  mysql:
+    image: mysql:8.0
+    container_name: codeflow-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: codeflow
+      TZ: Asia/Shanghai
+    # 端口仅供本地排查用；如服务器端口被占用可改右边宿主端口或去掉
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # 首次初始化空库时自动执行建表脚本
+      - ./sql:/docker-entrypoint-initdb.d
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=128M
+      --default-time-zone=+08:00
+      --max-connections=50
+      --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ==================== Redis（聊天记忆） ====================
+  redis:
+    image: redis:7-alpine
+    container_name: codeflow-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== Spring Boot 后端 ====================
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: codeflow-backend
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # 通过标准 Spring 环境变量覆盖 application.yaml 的本地地址/口令
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/codeflow?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      # 大模型 API Key（必填，阿里云百炼）
+      CODE_FLOW_KEY: ${CODE_FLOW_KEY}
+      # 加载宿主机 ./config 下的服务器专属配置（覆盖 classpath 的 agent.targets，避免本地路径污染部署）
+      SPRING_CONFIG_ADDITIONAL_LOCATION: /app/config/
+      # 2G 服务器 JVM 优化
+      JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseSerialGC"
+    volumes:
+      # 服务器工作目录：把要接入的目标项目放到宿主机 ./projects 下，对话接入时路径填 /projects/xxx
+      - ./projects:/projects
+      # 服务器专属配置（agent.targets 等）
+      - ./config:/app/config
+    ports:
+      - "8080:8080"
+
+  # ==================== Nginx 前端 ====================
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: codeflow-frontend
+    restart: always
+    depends_on:
+      - backend
+    # 对外暴露 80 端口访问前端
+    ports:
+      - "80:80"
+
+volumes:
+  mysql-data:
+  redis-data:

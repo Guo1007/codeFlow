@@ -1,0 +1,39 @@
+# ========== 服务器专属配置（覆盖 classpath 的 application.yaml） ==========
+# 部署时复制本文件为 config/application.yml 并按需修改。
+# 作用：覆盖 agent.targets，避免把本地开发机的项目路径带进服务器容器。
+# 说明：数据库与 Redis 已在 docker-compose.yml 通过 SPRING_DATASOURCE_* / SPRING_DATA_REDIS_* 配置，这里无需重复。
+
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${CODE_FLOW_KEY}
+      model-name: qwen3.8-27b
+      temperature: 0.7
+      timeout: PT60S
+    streaming-chat-model:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${CODE_FLOW_KEY}
+      model-name: qwen3.8-27b
+      temperature: 0.7
+      timeout: PT120S
+
+# 目标项目注册表：部署到服务器后，把项目放到宿主机 ./projects/ 目录，
+# 将 agent.targets 的 path 指向容器内 /projects/xxx；
+# 也可以留空（下方注释掉），然后打开页面在「AI 对话」中让 AI 动态接入，
+# 接入路径填 /projects/你的项目名（写入 MySQL，重启保留）。
+agent:
+  targets:
+    # 示例：服务器上的项目放在宿主机 ./projects/demo，则容器内路径为 /projects/demo
+    - name: demo
+      path: /projects/demo
+      framework-profile:
+    # - name: another
+    #   path: /projects/another
+    #   framework-profile:
+  doc:
+    timeout-multiplier: 5
+
+logging:
+  level:
+    com.aidev.agent: info

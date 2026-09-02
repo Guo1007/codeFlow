@@ -1,0 +1,13 @@
+目标项目：yudao（ruoyi-vue-pro）
+技术栈：
+- 后端：Spring Boot 2.7 + MyBatis Plus + MySQL + Redis
+- 前端：Vue3 + Element Plus（yudao-ui-admin-vue3，pnpm）
+后端分层规范：
+- controller：VO 入参校验（@Valid）+ @PreAuthorize 权限注解 + @Tag/@Operation 接口文档注解
+- service：业务逻辑接口与实现（Impl），业务异常统一用 ServiceException
+- dal：DO（继承 BaseDO，含 creator/create_time/updater/update_time/deleted 基础字段与逻辑删除）+ Mapper（继承 BaseMapperX）
+统一约定：
+- 接口统一返回 CommonResult，Bean 转换用 BeanUtils.toBean
+- 实体类用 Lombok 注解（@Data 等），不手写 getter/setter
+- 分页返回 PageResult，多租户与权限体系由框架提供
+前端模式：列表页 + 表单弹窗，api/ 与 views/ 按模块组织，自动导入（无需显式 import ref 等）

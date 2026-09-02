@@ -1,0 +1,36 @@
+### 后端 ###
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### IDE ###
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+
+### 前端 ###
+node_modules/
+dist/
+dist-ssr/
+*.local
+*.tsbuildinfo
+
+### 日志/其他 ###
+logs/
+*.log
+.DS_Store
+
+### 本地密钥/服务器专属配置（勿提交） ###
+.env
+.env.*
+!.env.example
+config/*.yml
+!config/application.example.yml
+projects/

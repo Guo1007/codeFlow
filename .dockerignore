@@ -1,0 +1,36 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.iml
+
+# Node
+ai-dev-agent-ui/node_modules
+ai-dev-agent-ui/dist
+
+# Build outputs
+target
+
+# Docker（保留 nginx.conf，排除 Dockerfile）
+docker-compose.yml
+docker/Dockerfile.*
+
+# 服务器专属配置（含密钥/API Key），不入镜像
+.env
+config/*.yml
+projects/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs
+README.md
+LICENSE

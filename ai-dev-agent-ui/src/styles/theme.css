@@ -1,0 +1,190 @@
+/* ============================================================
+   codeFlow 双主题设计系统
+   浅色 = 默认（清爽工具风）；深色 = html.dark（蓝图夜航）
+   所有组件只引用 --cf-* 变量，不写死颜色。
+   ============================================================ */
+:root {
+  /* 基础 */
+  --cf-bg: #f3f5f9;
+  --cf-panel: #ffffff;
+  --cf-panel-2: #f8fafd;
+  --cf-border: #e6eaf1;
+  --cf-border-strong: #d5dce6;
+  --cf-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.05);
+
+  /* 文字 */
+  --cf-text: #1c2433;
+  --cf-text-dim: #5f6b7f;
+  --cf-text-faint: #97a2b3;
+
+  /* 语义色 */
+  --cf-accent: #2563eb;
+  --cf-accent-contrast: #ffffff;
+  --cf-accent-soft: rgba(37, 99, 235, 0.07);
+  --cf-amber: #b45309;
+  --cf-amber-soft: rgba(217, 119, 6, 0.09);
+  --cf-green: #15803d;
+  --cf-green-soft: rgba(22, 163, 74, 0.09);
+
+  --cf-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+
+  /* Markdown 渲染（代码面板恒定深色，匹配 vs2015 高亮主题） */
+  --md-text: #33415c;
+  --md-heading: #172136;
+  --md-border: #e3e9f2;
+  --md-th-bg: #f5f8fd;
+  --md-code-bg: #101827;
+  --md-inline: #1d4ed8;
+  --md-inline-bg: rgba(37, 99, 235, 0.07);
+  --md-quote: #64748b;
+  --md-quote-bar: rgba(37, 99, 235, 0.45);
+
+  /* 左侧导航栏：双主题恒定深色（视觉锚点） */
+  --rail-bg: #101827;
+  --rail-hover: rgba(255, 255, 255, 0.06);
+  --rail-text: #8b97ab;
+  --rail-active: #ffffff;
+  --rail-active-bg: rgba(59, 130, 246, 0.16);
+
+  /* Element Plus 覆盖（浅色） */
+  --el-color-primary: #2563eb;
+  --el-color-primary-light-3: #5c84ef;
+  --el-color-primary-light-5: #92aaf5;
+  --el-color-primary-light-7: #c0d1fa;
+  --el-color-primary-light-8: #d7e2fc;
+  --el-color-primary-light-9: #edf2fd;
+  --el-color-primary-dark-2: #1d4fc4;
+  --el-border-radius-base: 6px;
+}
+
+html.dark {
+  --cf-bg: #0b1220;
+  --cf-panel: #121c2e;
+  --cf-panel-2: #0e1727;
+  --cf-border: #1f2c44;
+  --cf-border-strong: #2b3b57;
+  --cf-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(2, 6, 16, 0.45);
+
+  --cf-text: #dbe4f3;
+  --cf-text-dim: #8593ab;
+  --cf-text-faint: #5b6a84;
+
+  --cf-accent: #3b82f6;
+  --cf-accent-contrast: #ffffff;
+  --cf-accent-soft: rgba(59, 130, 246, 0.12);
+  --cf-amber: #f0a83c;
+  --cf-amber-soft: rgba(240, 168, 60, 0.12);
+  --cf-green: #4ade80;
+  --cf-green-soft: rgba(74, 222, 128, 0.12);
+
+  --md-text: #b9c5da;
+  --md-heading: #e9eefb;
+  --md-border: #263650;
+  --md-th-bg: #17233a;
+  --md-code-bg: #0a101d;
+  --md-inline: #7cb1f9;
+  --md-inline-bg: rgba(59, 130, 246, 0.12);
+  --md-quote: #8b98ae;
+  --md-quote-bar: rgba(59, 130, 246, 0.55);
+
+  /* Element Plus 覆盖（深色） */
+  --el-bg-color: var(--cf-panel);
+  --el-bg-color-page: var(--cf-bg);
+  --el-bg-color-overlay: #182540;
+  --el-color-primary: #3b82f6;
+  --el-color-primary-light-3: #2f6ae0;
+  --el-color-primary-light-5: #274fa8;
+  --el-color-primary-light-7: #1f3a75;
+  --el-color-primary-light-8: #1a3057;
+  --el-color-primary-light-9: #152540;
+  --el-color-primary-dark-2: #5b9af8;
+  --el-text-color-primary: #dbe4f3;
+  --el-text-color-regular: #b6c3d6;
+  --el-text-color-secondary: #8593ab;
+  --el-text-color-placeholder: #5b6a84;
+  --el-border-color: #263650;
+  --el-border-color-light: #1f2c44;
+  --el-border-color-lighter: #1a2438;
+  --el-fill-color: #1a2438;
+  --el-fill-color-light: #172035;
+  --el-fill-color-blank: var(--cf-panel);
+  --el-disabled-bg-color: #141d30;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--cf-text);
+  font-family: 'PingFang SC', 'MiSans', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+  background: var(--cf-bg);
+  transition: background-color 0.25s ease, color 0.25s ease;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 深色模式附加蓝图网格氛围（浅色保持干净） */
+html.dark body {
+  background:
+    radial-gradient(1100px 500px at 85% -10%, rgba(59, 130, 246, 0.06), transparent 60%),
+    linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+    var(--cf-bg);
+  background-size: auto, 34px 34px, 34px 34px, auto;
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.28);
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cf-border-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cf-text-faint);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 入场动画 */
+@keyframes cf-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Element 细节 */
+.el-card {
+  border: 1px solid var(--cf-border);
+  border-radius: 10px;
+  box-shadow: var(--cf-shadow);
+}
+
+.el-dialog {
+  border-radius: 12px;
+  box-shadow: var(--cf-shadow);
+}
+
+.el-message-box {
+  border-radius: 10px;
+}

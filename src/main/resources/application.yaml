@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: ai-dev-agent
+  # 数据源：开发任务与阶段产物的持久化
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/codeflow?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  # Redis：聊天记忆（多轮对话上下文）存储
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+#      password:
+
+server:
+  port: 8080
+
+# LangChain4j：OpenAI 兼容协议（DeepSeek），starter 自动注册 openAiChatModel / openAiStreamingChatModel
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${CODE_FLOW_KEY}
+      model-name: qwen3.8-max-0902
+      temperature: 0.7
+      timeout: PT60S
+    streaming-chat-model:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${CODE_FLOW_KEY}
+      model-name: qwen3.8-max-0902
+      temperature: 0.7
+      timeout: PT120S
+
+# MyBatis-Plus
+mybatis-plus:
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted # 全局逻辑删除字段
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+
+# 目标项目注册表：换项目/加项目只改这里，引擎代码零改动
+# 每个项目：name（唯一标识）+ path（根目录）+ framework-profile（框架画像，可空 = Agent 自主探索）
+agent:
+  targets:
+    - name: ruoyi-vue-pro
+      path: d:/workplace/project/Glimcy/ruoyi-vue-pro
+      framework-profile: classpath:framework-profile-yudao.txt
+    # 新增目标项目示例（取消注释即可，画像为空时 Agent 会用读码工具自主探索项目规范）：
+    # - name: furniture-system
+    #   path: d:/FurnitureSystem
+    #   framework-profile:
+  doc:
+    # 文档级生成的超时倍数（长文档生成慢）
+    timeout-multiplier: 5
+
+logging:
+  level:
+    com.aidev.agent: debug
