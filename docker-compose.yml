@@ -67,6 +67,8 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       # 大模型 API Key（必填，阿里云百炼）
       CODE_FLOW_KEY: ${CODE_FLOW_KEY}
+      # 容器内后端端口固定为 1007（与 application.yaml 一致，nginx 按此转发）
+      SERVER_PORT: 1007
       # 加载宿主机 ./config 下的服务器专属配置（覆盖 classpath 的 agent.targets，避免本地路径污染部署）
       SPRING_CONFIG_ADDITIONAL_LOCATION: /app/config/
       # 2G 服务器 JVM 优化
@@ -76,9 +78,9 @@ services:
       - ./projects:/projects
       # 服务器专属配置（agent.targets 等）
       - ./config:/app/config
-    # 宿主端口 8082：避开 FurnitureSystem 后端占用 8080（容器内部仍为 8080，由 nginx 反代）
+    # 宿主端口 8082 对外：避开 FurnitureSystem 后端占用 8080（容器内部后端口为 1007，由 nginx 反代）
     ports:
-      - "8082:8080"
+      - "8082:1007"
 
   # ==================== Nginx 前端 ====================
   frontend:

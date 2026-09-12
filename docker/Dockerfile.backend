@@ -41,8 +41,8 @@ WORKDIR /app
 
 COPY --from=builder /build/target/*.jar app.jar
 
-# 暴露端口（与 application.yaml server.port 保持一致）
-EXPOSE 8080
+# 暴露端口（与 application.yaml server.port 保持一致，当前为 1007）
+EXPOSE 1007
 
 # JVM 参数优化（2G 服务器）
 ENV JAVA_OPTS="-Xms128m -Xmx256m -XX:+UseSerialGC"
