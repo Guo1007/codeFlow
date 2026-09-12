@@ -71,6 +71,13 @@
             <version>${langchain4j.version}</version>
         </dependency>
 
+        <!-- 文档解析：知识库上传 PDF/Word/Excel/PPT 等二进制文件时，自动抽取为纯文本 -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-document-parser-apache-tika</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+
         <!-- ORM：只做基础 CRUD -->
         <dependency>
             <groupId>com.baomidou</groupId>

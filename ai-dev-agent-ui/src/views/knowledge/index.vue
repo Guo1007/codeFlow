@@ -12,6 +12,7 @@ const projects = ref<TargetProjectVO[]>([])
 // 上传表单
 const uploadVisible = ref(false)
 const uploading = ref(false)
+const fileUploading = ref(false)
 const form = reactive({ name: '', project: '', content: '' })
 
 // 检索
@@ -63,6 +64,22 @@ const submitUpload = async () => {
     console.warn('[Knowledge][上传失败]', e)
   } finally {
     uploading.value = false
+  }
+}
+
+// 选择文件自动解析后上传（保留粘贴文本方式）
+const handleFileChange = async (file: { raw: File }) => {
+  if (!file?.raw) return
+  fileUploading.value = true
+  try {
+    await KnowledgeApi.uploadDocumentFile(file.raw, form.project || undefined)
+    ElMessage.success(`已解析并向量化「${file.raw.name}」`)
+    uploadVisible.value = false
+    await loadDocuments()
+  } catch (e) {
+    console.warn('[Knowledge][文件上传失败]', e)
+  } finally {
+    fileUploading.value = false
   }
 }
 
@@ -157,6 +174,25 @@ onMounted(async () => {
 
     <!-- 上传文档弹窗 -->
     <el-dialog v-model="uploadVisible" title="上传知识库文档" width="560px" :close-on-click-modal="false">
+      <!-- 方式一：上传文件自动解析 -->
+      <div class="kb-upload-file">
+        <el-upload
+          :show-file-list="false"
+          :auto-upload="false"
+          :on-change="handleFileChange"
+          accept=".txt,.md,.markdown,.html,.htm,.json,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+          :disabled="fileUploading"
+        >
+          <el-button type="primary" plain :icon="Upload" :loading="fileUploading">
+            选择文件上传
+          </el-button>
+        </el-upload>
+        <div class="kb-upload-hint">支持 PDF / Word / Excel / PPT / Markdown / TXT 等，将自动提取文本并向量化</div>
+      </div>
+
+      <el-divider class="kb-divider">或粘贴文本</el-divider>
+
+      <!-- 方式二：粘贴文本 -->
       <el-form label-position="top">
         <el-form-item label="文档名称">
           <el-input v-model="form.name" placeholder="例如：优惠券模块需求说明" maxlength="200" />
@@ -170,7 +206,7 @@ onMounted(async () => {
           <el-input
             v-model="form.content"
             type="textarea"
-            :rows="10"
+            :rows="8"
             placeholder="粘贴或输入文档内容，将自动切分并向量化存储"
           />
         </el-form-item>
@@ -320,5 +356,20 @@ onMounted(async () => {
   line-height: 1.7;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.kb-upload-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kb-upload-hint {
+  font-size: 12px;
+  color: var(--cf-text-faint);
+}
+
+.kb-divider {
+  margin: 14px 0;
 }
 </style>

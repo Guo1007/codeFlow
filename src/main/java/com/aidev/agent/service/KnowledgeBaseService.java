@@ -21,6 +21,11 @@ public interface KnowledgeBaseService {
     KnowledgeDocVO uploadDocument(String userId, String project, String name, String content);
 
     /**
+     * 上传文件并自动解析后向量化入库（支持 pdf/word/excel/ppt/html/txt 等，经 Apache Tika 解析）
+     */
+    KnowledgeDocVO uploadDocumentFile(String userId, String project, String fileName, byte[] bytes);
+
+    /**
      * 删除文档（物理删除 MySQL 记录 + 对应 Redis 向量段）
      */
     void deleteDocument(Long id, String userId);

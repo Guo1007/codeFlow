@@ -1,4 +1,5 @@
 import { del, get, post } from '../request'
+import service from '../request'
 
 // 知识库文档 VO
 export interface KnowledgeDocVO {
@@ -28,6 +29,15 @@ export const KnowledgeApi = {
   // 上传文档并向量化
   uploadDocument: async (data: { project?: string; name: string; content: string }): Promise<KnowledgeDocVO> => {
     return await post<KnowledgeDocVO>('/knowledge/document/upload', data)
+  },
+
+  // 上传文件并自动解析后向量化（PDF/Word/Excel/PPT/HTML/TXT 等）
+  uploadDocumentFile: async (file: File, project?: string): Promise<KnowledgeDocVO> => {
+    const fd = new FormData()
+    fd.append('file', file)
+    if (project) fd.append('project', project)
+    const resp = await service.post('/knowledge/document/upload-file', fd)
+    return resp as unknown as KnowledgeDocVO
   },
 
   // 删除文档

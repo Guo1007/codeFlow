@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -45,6 +47,17 @@ public class KnowledgeBaseController {
     public ApiResponse<KnowledgeDocVO> upload(@Valid @RequestBody KnowledgeUploadReqVO reqVO) {
         return ApiResponse.success(knowledgeBaseService.uploadDocument(
                 UserContext.getUserIdStr(), reqVO.getProject(), reqVO.getName(), reqVO.getContent()));
+    }
+
+    /**
+     * 上传文件并自动解析后向量化（PDF/Word/Excel/PPT/HTML/TXT 等）
+     */
+    @PostMapping("/document/upload-file")
+    public ApiResponse<KnowledgeDocVO> uploadFile(@RequestParam("file") MultipartFile file,
+                                                  @RequestParam(value = "project", required = false) String project)
+            throws IOException {
+        return ApiResponse.success(knowledgeBaseService.uploadDocumentFile(
+                UserContext.getUserIdStr(), project, file.getOriginalFilename(), file.getBytes()));
     }
 
     /**

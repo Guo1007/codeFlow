@@ -2,10 +2,14 @@ package com.aidev.agent.config;
 
 import com.aidev.agent.repository.RedisChatMemoryStore;
 import dev.langchain4j.community.store.embedding.redis.RedisEmbeddingStore;
+import dev.langchain4j.data.document.Document;
+import dev.langchain4j.data.document.DocumentParser;
+import dev.langchain4j.data.document.parser.apache.tika.ApacheTikaDocumentParser;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.memory.chat.ChatMemoryProvider;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.rag.content.retriever.ContentRetriever;
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
@@ -81,12 +85,22 @@ public class AiConfig {
      * 创建 RAG 内容检索器，基于向量相似度检索相关片段。
      */
     @Bean
-    public ContentRetriever contentRetriever(EmbeddingStore<TextSegment> embeddingStore) {
+    public ContentRetriever contentRetriever(EmbeddingStore<TextSegment> embeddingStore,
+                                             EmbeddingModel embeddingModel) {
         return EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(embeddingStore)
+                .embeddingModel(embeddingModel)
                 .minScore(0.2)
                 .maxResults(5)
                 .build();
+    }
+
+    /**
+     * 文档解析器（Apache Tika）：知识库上传 PDF/Word/Excel/PPT/HTML 等文件时抽取为纯文本。
+     */
+    @Bean
+    public DocumentParser documentParser() {
+        return new ApacheTikaDocumentParser();
     }
 
     /**

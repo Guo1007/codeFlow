@@ -7,6 +7,8 @@ import com.aidev.agent.dal.entity.KbDocument;
 import com.aidev.agent.dal.mapper.KbDocumentMapper;
 import com.aidev.agent.service.KnowledgeBaseService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import dev.langchain4j.data.document.Document;
+import dev.langchain4j.data.document.DocumentParser;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -17,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayInputStream;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,11 +48,16 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     private final KbDocumentMapper documentMapper;
 
     /**
-     * Redis 向量库（KbRagConfig 注册）
+     * Redis 向量库（AiConfig 注册）
      */
     private final EmbeddingStore<TextSegment> embeddingStore;
 
     private final EmbeddingModel embeddingModel;
+
+    /**
+     * 文档解析器（AiConfig 注册，Apache Tika）
+     */
+    private final DocumentParser documentParser;
 
     @Override
     public List<KnowledgeDocVO> listDocuments(String userId, String project) {
@@ -86,6 +94,28 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
         documentMapper.updateById(doc);
         log.info("[uploadDocument][{}] 上传并向量化文档「{}」", userId, docName);
         return toVO(doc);
+    }
+
+    @Override
+    public KnowledgeDocVO uploadDocumentFile(String userId, String project, String fileName, byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            throw new ServiceException("文件内容为空");
+        }
+        String text;
+        try {
+            Document doc = documentParser.parse(new ByteArrayInputStream(bytes));
+            text = doc.text();
+        } catch (ServiceException se) {
+            throw se;
+        } catch (Exception e) {
+            log.warn("[uploadDocumentFile][{}] 文件解析失败：{}", fileName, e.getMessage());
+            throw new ServiceException("无法解析文件「" + fileName + "」，请确认格式受支持");
+        }
+        if (text == null || text.isBlank()) {
+            throw new ServiceException("未从「" + fileName + "」中解析出文本内容，可能为图片/扫描件或不受支持的格式");
+        }
+        String name = (fileName == null || fileName.isBlank()) ? "上传文档" : fileName;
+        return uploadDocument(userId, project, name, text);
     }
 
     @Override
