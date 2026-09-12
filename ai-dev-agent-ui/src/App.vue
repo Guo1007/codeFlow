@@ -3,11 +3,12 @@ import { onMounted, ref, computed, watch } from 'vue'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import ChatView from './views/chat/index.vue'
 import WorkbenchView from './views/workbench/index.vue'
+import KnowledgeView from './views/knowledge/index.vue'
 import LoginView from './views/login/index.vue'
 import { authState } from './api/request'
 
 // 页面切换（页面较少，暂不引入 vue-router）
-const activeView = ref<'chat' | 'workbench'>('workbench')
+const activeView = ref<'chat' | 'workbench' | 'knowledge'>('workbench')
 
 // 当前登录用户昵称（localStorage: cf-user），登出时清空
 const currentUser = computed(() => localStorage.getItem('cf-user') || '')
@@ -74,6 +75,17 @@ onMounted(() => {
           </svg>
           <span>AI 对话</span>
         </button>
+        <button
+          class="rail-item"
+          :class="{ 'is-active': activeView === 'knowledge' }"
+          @click="activeView = 'knowledge'"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="rail-icon">
+            <path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6Z" />
+            <path d="M8 9h8M8 13h8M8 17h4" stroke-linecap="round" />
+          </svg>
+          <span>知识库</span>
+        </button>
       </nav>
 
       <div class="rail-bottom">
@@ -98,7 +110,8 @@ onMounted(() => {
     <main class="content">
       <KeepAlive>
         <WorkbenchView v-if="activeView === 'workbench'" />
-        <ChatView v-else />
+        <ChatView v-else-if="activeView === 'chat'" />
+        <KnowledgeView v-else />
       </KeepAlive>
     </main>
   </div>

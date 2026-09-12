@@ -12,6 +12,7 @@ import com.aidev.agent.controller.vo.ChatSessionVO;
 import com.aidev.agent.controller.vo.SessionRenameReqVO;
 import com.aidev.agent.controller.vo.TargetProjectVO;
 import com.aidev.agent.service.ChatHistoryService;
+import com.aidev.agent.service.KnowledgeBaseService;
 import dev.langchain4j.store.memory.chat.ChatMemoryStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,6 +63,11 @@ public class ChatController {
      * 聊天记忆存储（Redis 实现），删除会话时同步清除多轮记忆
      */
     private final ChatMemoryStore chatMemoryStore;
+
+    /**
+     * 知识库检索（RAG 注入）
+     */
+    private final KnowledgeBaseService knowledgeBaseService;
 
     /**
      * JSON 序列化工具，用于封装 SSE 事件内容
@@ -142,7 +148,7 @@ public class ChatController {
         String memoryId = buildMemoryId(reqVO.getProject(), conversationId);
         chatHistoryService.ensureSession(conversationId, resolveProjectName(reqVO.getProject()), reqVO.getPrompt(), UserContext.getUserIdStr());
         chatHistoryService.saveUserMessage(conversationId, reqVO.getPrompt());
-        String content = chatAiService.chat(memoryId, reqVO.getPrompt());
+        String content = chatAiService.chat(memoryId, buildRagPrompt(reqVO.getProject(), reqVO.getPrompt()));
         chatHistoryService.saveAssistantMessage(conversationId, content);
         return ApiResponse.success(content);
     }
@@ -165,9 +171,11 @@ public class ChatController {
 
         boolean isNew = reqVO.getConversationId() == null || reqVO.getConversationId().isEmpty();
         Flux<String> metaEvent = isNew ? Flux.just(metaJson(conversationId)) : Flux.empty();
+        // 知识库 RAG：检索命中片段注入上下文（用户输入将按原样落库）
+        String augPrompt = buildRagPrompt(reqVO.getProject(), reqVO.getPrompt());
         // 累积 AI 回复，用于流结束落库
         StringBuilder reply = new StringBuilder();
-        Flux<String> chatStream = chatAiService.streamChat(memoryId, reqVO.getPrompt())
+        Flux<String> chatStream = chatAiService.streamChat(memoryId, augPrompt)
                 .doOnNext(reply::append)
                 .map(this::contentJson)
                 .concatWith(Flux.just("[DONE]"))
@@ -203,6 +211,29 @@ public class ChatController {
     private String buildMemoryId(String projectName, String conversationId) {
         AgentProperties.TargetProject target = targetProjectRegistry.resolve(projectName);
         return CHAT_MEMORY_KEY_PREFIX + target.getName() + ":" + UserContext.getUserIdStr() + ":" + conversationId;
+    }
+
+    /**
+     * 知识库 RAG：按当前项目检索相关片段，拼入用户输入；无命中则原样返回
+     */
+    private String buildRagPrompt(String projectName, String prompt) {
+        try {
+            String project = resolveProjectName(projectName);
+            var hits = knowledgeBaseService.search(project, prompt, 3);
+            if (hits.isEmpty()) {
+                return prompt;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.append("【知识库检索结果（仅作参考）】\n");
+            for (var hit : hits) {
+                sb.append("- 来源[").append(hit.getName()).append("]:\n").append(hit.getContent()).append("\n\n");
+            }
+            sb.append("【用户问题】\n").append(prompt);
+            return sb.toString();
+        } catch (Exception e) {
+            // 检索失败不阻塞对话
+            return prompt;
+        }
     }
 
     /**

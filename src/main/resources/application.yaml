@@ -35,6 +35,19 @@ langchain4j:
       temperature: 0.7
       timeout: PT120S
 
+    # 向量模型（知识库 embedding）参照 FurnitureSystem：阿里云百炼兼容协议
+    embedding-model:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${EMBEDDING_KEY:}
+      model-name: qwen3.7-text-embedding
+      max-segments-per-batch: 10
+
+  # Redis 向量存储（langchain4j-community-redis starter 自动装配 RedisEmbeddingStore）
+  community:
+    redis:
+      host: ${LANGCHAIN_REDIS_HOST:127.0.0.1}
+      port: ${LANGCHAIN_REDIS_PORT:6379}
+
 # MyBatis-Plus
 mybatis-plus:
   global-config:

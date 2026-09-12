@@ -30,9 +30,9 @@ services:
       timeout: 5s
       retries: 10
 
-  # ==================== Redis（聊天记忆） ====================
+  # ==================== Redis Stack（含 RediSearch 向量搜索，供知识库向量库） ====================
   redis:
-    image: redis:7-alpine
+    image: redis/redis-stack-server:7.4.0-v8
     container_name: codeflow-redis
     restart: always
     # 6379 未被占用，保持默认
@@ -67,6 +67,11 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       # 大模型 API Key（必填，阿里云百炼）
       CODE_FLOW_KEY: ${CODE_FLOW_KEY}
+      # 知识库向量模型 API Key（阿里云百炼）
+      EMBEDDING_KEY: ${EMBEDDING_KEY}
+      # Redis 向量库连接（langchain4j-community-redis，指向 redis 服务）
+      LANGCHAIN_REDIS_HOST: redis
+      LANGCHAIN_REDIS_PORT: 6379
       # 容器内后端端口固定为 1007（与 application.yaml 一致，nginx 按此转发）
       SERVER_PORT: 1007
       # 加载宿主机 ./config 下的服务器专属配置（覆盖 classpath 的 agent.targets，避免本地路径污染部署）

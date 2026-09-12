@@ -148,3 +148,27 @@ CREATE TABLE `sys_user` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_username` (`username`)
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户';
+
+-- ----------------------------
+-- 知识库文档表（元数据存 MySQL，向量段存 Redis；检索走 Redis，管理走本表）
+-- 已部署的旧库单独执行下面 CREATE 即可
+-- ----------------------------
+DROP TABLE IF EXISTS `kb_document`;
+CREATE TABLE `kb_document` (
+  `id`            bigint       NOT NULL AUTO_INCREMENT COMMENT '编号',
+  `document_id`   varchar(64)  NOT NULL COMMENT '文档唯一标识（与 Redis 向量段元数据关联）',
+  `project`       varchar(100) NOT NULL DEFAULT '' COMMENT '所属目标项目名称（空=全局）',
+  `doc_type`      varchar(20)  NOT NULL DEFAULT 'upload' COMMENT '类型：upload=手动上传 / design=设计文档（定稿自动索引）',
+  `version`       int          NOT NULL DEFAULT 1 COMMENT '版本号（定稿文档随版本变化，用途去重/替换）',
+  `name`          varchar(200) NOT NULL DEFAULT '' COMMENT '文档名称',
+  `content`       mediumtext   NOT NULL COMMENT '文档原文',
+  `segment_ids`   text         COMMENT 'Redis 中该文档所有向量段 ID（逗号分隔，删除/替换向量用）',
+  `embedding_status` tinyint    NOT NULL DEFAULT 0 COMMENT '向量化状态：0处理中 / 1已完成',
+  `creator`       varchar(64)  NOT NULL DEFAULT '' COMMENT '创建者',
+  `create_time`   datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time`   datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted`       bit(1)       NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`),
+  KEY `idx_document_id` (`document_id`),
+  KEY `idx_project_type` (`project`, `doc_type`)
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识库文档';

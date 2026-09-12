@@ -11,6 +11,7 @@ import com.aidev.agent.enums.DevArtifactStatusEnum;
 import com.aidev.agent.enums.DevArtifactTypeEnum;
 import com.aidev.agent.enums.DevStageEnum;
 import com.aidev.agent.service.DevDesignService;
+import com.aidev.agent.service.KnowledgeBaseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,8 @@ public class DevDesignServiceImpl implements DevDesignService {
     private final DevProjectMapper projectMapper;
 
     private final DevArtifactMapper artifactMapper;
+
+    private final KnowledgeBaseService knowledgeBaseService;
 
     /**
      * 生成中的任务集合（projectId -> true），防止同一任务并发发起生成
@@ -101,6 +104,13 @@ public class DevDesignServiceImpl implements DevDesignService {
         update.setUpdateTime(LocalDateTime.now());
         artifactMapper.updateById(update);
         projectMapper.updateStage(projectId, DevStageEnum.DESIGN_FINALIZED.getStage());
+        // 文档定稿时自动向量化入库，供知识库检索
+        try {
+            knowledgeBaseService.indexDesign(project.getTargetProject(), latest.getContent(),
+                    latest.getVersion(), project.getCreator());
+        } catch (Exception e) {
+            log.warn("[approveDesign][任务 {} 设计文档定稿后的知识库索引失败] {}", projectId, e.getMessage());
+        }
         log.info("[approveDesign][任务 {} 设计文档已定稿，版本 v{}]", projectId, latest.getVersion());
     }
 

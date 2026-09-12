@@ -63,6 +63,13 @@
             <artifactId>langchain4j-reactor</artifactId>
             <version>${langchain4j-reactor.version}</version>
         </dependency>
+        <!-- Redis 向量存储（RediSearch/FT，含 Spring Boot Starter 自动装配 RedisEmbeddingStore）：
+             1.0.0-beta1 起 langchain4j-redis 已迁移到 community 并更名 langchain4j-community-redis -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-community-redis-spring-boot-starter</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
 
         <!-- ORM：只做基础 CRUD -->
         <dependency>
