@@ -1,4 +1,4 @@
-import { get, post } from '../request'
+import { del, get, post } from '../request'
 import { fetchSseStream } from '../sse'
 
 // AI 对话请求 VO
@@ -13,6 +13,7 @@ export interface TargetProjectVO {
   name: string // 项目标识
   path: string // 项目根目录
   hasProfile: boolean // 是否配置了框架画像
+  example: boolean // 是否示例项目（接入示例，勿在此工作，不可删）
 }
 
 // SSE meta 事件（新会话时返回会话 ID）
@@ -31,11 +32,33 @@ export interface ChatErrorEvent {
   error: string
 }
 
+// 历史会话 VO
+export interface ChatSessionVO {
+  conversationId: string
+  project: string
+  title: string
+  messageCount: number
+  createTime: Date
+  updateTime: Date
+}
+
+// 历史消息 VO
+export interface ChatMessageVO {
+  role: 'user' | 'assistant'
+  content: string
+  createTime: Date
+}
+
 // AI 对话 API
 export const ChatApi = {
   // 目标项目列表（前端项目选择器数据源）
   getTargetProjects: async (): Promise<TargetProjectVO[]> => {
     return await get<TargetProjectVO[]>('/chat/projects')
+  },
+
+  // 删除动态接入的目标项目（yaml 静态/示例项目不可删）
+  removeTargetProject: async (name: string): Promise<boolean> => {
+    return await del<boolean>('/chat/project', { name })
   },
 
   // 同步对话：等待模型输出完整结果后一次性返回
@@ -76,5 +99,25 @@ export const ChatApi = {
       },
       ctrl
     )
+  },
+
+  // 历史会话列表（可选按目标项目过滤）
+  listSessions: async (project?: string): Promise<ChatSessionVO[]> => {
+    return await get<ChatSessionVO[]>('/chat/sessions', project ? { project } : {})
+  },
+
+  // 某会话完整历史消息
+  listHistory: async (conversationId: string): Promise<ChatMessageVO[]> => {
+    return await get<ChatMessageVO[]>('/chat/history', { conversationId })
+  },
+
+  // 删除历史会话（需传所属项目用于清对应 Redis 记忆）
+  deleteSession: async (conversationId: string, project?: string) => {
+    return await del('/chat/session', { conversationId, project })
+  },
+
+  // 重命名会话标题
+  renameSession: async (conversationId: string, title: string) => {
+    return await post('/chat/session/rename', { conversationId, title })
   }
 }

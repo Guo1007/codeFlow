@@ -1,11 +1,22 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import ChatView from './views/chat/index.vue'
 import WorkbenchView from './views/workbench/index.vue'
+import LoginView from './views/login/index.vue'
+import { authState } from './api/request'
 
 // 页面切换（页面较少，暂不引入 vue-router）
 const activeView = ref<'chat' | 'workbench'>('workbench')
+
+// 当前登录用户昵称（localStorage: cf-user），登出时清空
+const currentUser = computed(() => localStorage.getItem('cf-user') || '')
+
+function logout() {
+  localStorage.removeItem('cf-token')
+  localStorage.removeItem('cf-user')
+  authState.value = false
+}
 
 // ===== 明暗主题切换（持久化到 localStorage）=====
 const THEME_KEY = 'cf-theme'
@@ -27,7 +38,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="shell">
+  <!-- 未登录显示登录/注册页 -->
+  <LoginView v-if="!authState" />
+
+  <!-- 已登录显示主界面 -->
+  <div v-else class="shell">
     <!-- 左侧导航栏（双主题恒定深色，作为视觉锚点） -->
     <aside class="rail">
       <div class="rail-brand">
@@ -69,6 +84,12 @@ onMounted(() => {
           </el-icon>
           <span>{{ isDark ? '浅色模式' : '深色模式' }}</span>
         </button>
+        <!-- 当前登录用户 + 登出 -->
+        <div class="rail-user">
+          <span class="rail-user-avatar">{{ (currentUser || 'U').charAt(0) }}</span>
+          <span class="rail-user-name" :title="currentUser">{{ currentUser || '未登录' }}</span>
+          <button class="rail-logout" title="退出登录" @click="logout">退出</button>
+        </div>
         <div class="rail-version">v1.0</div>
       </div>
     </aside>
@@ -186,6 +207,54 @@ onMounted(() => {
 }
 
 .rail-theme:hover {
+  background: var(--rail-hover);
+  color: #d5dce8;
+}
+
+.rail-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.rail-user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.25);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rail-user-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--rail-text);
+  font-size: 12.5px;
+}
+
+.rail-logout {
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--rail-text);
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.rail-logout:hover {
   background: var(--rail-hover);
   color: #d5dce8;
 }

@@ -23,4 +23,9 @@ public class TargetProjectVO {
      */
     private Boolean hasProfile;
 
+    /**
+     * 是否示例项目（true 表示"接入示例，勿在此工作"，不可删除）
+     */
+    private Boolean example;
+
 }

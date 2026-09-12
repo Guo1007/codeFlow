@@ -55,6 +55,21 @@ public class ProjectRespVO {
     private Integer codeVersion;
 
     /**
+     * 最新使用说明内容（未生成时为 null）
+     */
+    private String manualContent;
+
+    /**
+     * 最新使用说明版本号（未生成时为 null）
+     */
+    private Integer manualVersion;
+
+    /**
+     * 最新使用说明状态：2-已定稿（未生成时为 null）
+     */
+    private Integer manualStatus;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

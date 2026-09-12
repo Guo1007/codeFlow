@@ -49,6 +49,11 @@ public class AgentProperties {
          */
         private String frameworkProfile;
 
+        /**
+         * 是否示例项目（默认 false）。示例项目仅供展示，不可删除，且不应作为实际工作目录。
+         */
+        private Boolean example = false;
+
     }
 
     @Data

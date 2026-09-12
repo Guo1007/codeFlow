@@ -16,22 +16,22 @@ spring:
 #      password:
 
 server:
-  port: 8080
+  port: 1007
 
 # LangChain4j：OpenAI 兼容协议（DeepSeek），starter 自动注册 openAiChatModel / openAiStreamingChatModel
 langchain4j:
   open-ai:
     chat-model:
-      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      base-url: https://api.deepseek.com
       api-key: ${CODE_FLOW_KEY}
-      model-name: qwen3.8-flash
+      model-name: deepseek-flash
       temperature: 0.7
       timeout: PT60S
 
     streaming-chat-model:
-      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      base-url: https://api.deepseek.com
       api-key: ${CODE_FLOW_KEY}
-      model-name: qwen3.8-flash
+      model-name: deepseek-flash
       temperature: 0.7
       timeout: PT120S
 
@@ -50,16 +50,19 @@ mybatis-plus:
 # 每个项目：name（唯一标识）+ path（根目录）+ framework-profile（框架画像，可空 = Agent 自主探索）
 agent:
   targets:
+    # 示例接入项目（仅供展示，勿在此工作；不可删除。新增目标项目请在这里追加配置，或对话中让 AI 接入）
     - name: ruoyi-vue-pro
       path: d:/workplace/project/Glimcy/ruoyi-vue-pro
       framework-profile: classpath:framework-profile-yudao.txt
-    # 新增目标项目示例（取消注释即可，画像为空时 Agent 会用读码工具自主探索项目规范）：
-    # - name: furniture-system
-    #   path: d:/FurnitureSystem
-    #   framework-profile:
+      example: true
   doc:
     # 文档级生成的超时倍数（长文档生成慢）
     timeout-multiplier: 5
+
+# JWT 认证配置
+jwt:
+  secret: codeflow-jwt-secret-key-for-demo-please-change-in-prod-2026
+  expire-hours: 24
 
 logging:
   level:

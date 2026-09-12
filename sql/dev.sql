@@ -93,3 +93,58 @@ INSERT INTO `dev_project` VALUES (1, '用户反馈管理模块', '# 用户反馈
 INSERT INTO `dev_project` VALUES (2, '反馈', '### 我的反馈列表（用户）\n- 分页展示当前用户提交的反馈：标题、类型、提交时间、状态\n- 支持按反馈类型和状态筛选\n- 点击可查看详情及管理员的处理回复', 2, 'agent-test', 'admin', '2026-09-02 10:24:12', '', '2026-09-02 11:38:44', b'0');
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ----------------------------
+-- 以下为 AI 对话历史持久化（会话索引 + 历史消息）
+-- 已部署的旧库单独执行下面两条 CREATE 即可（新建表无破坏）
+-- ----------------------------
+
+-- ----------------------------
+-- AI 对话会话表（历史会话索引）
+-- ----------------------------
+DROP TABLE IF EXISTS `agent_chat_session`;
+CREATE TABLE `agent_chat_session` (
+    `id`          bigint       NOT NULL AUTO_INCREMENT COMMENT '编号',
+    `conversation_id` varchar(64) NOT NULL               COMMENT '会话唯一标识（对应 Redis 记忆 memoryId 的一段）',
+    `project`     varchar(100) NOT NULL DEFAULT ''       COMMENT '所属目标项目名称',
+    `title`       varchar(200) NOT NULL DEFAULT ''       COMMENT '会话标题（首条消息摘要）',
+    `message_count` int        NOT NULL DEFAULT 0        COMMENT '消息条数',
+    `creator`     varchar(64)  NOT NULL DEFAULT ''       COMMENT '创建者',
+    `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后对话时间',
+    `deleted`     bit(1)       NOT NULL DEFAULT b'0'     COMMENT '是否删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_conversation` (`conversation_id`),
+    KEY `idx_project` (`project`),
+    KEY `idx_update_time` (`update_time`)
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'AI 对话会话';
+
+-- ----------------------------
+-- AI 对话历史消息表（完整留存，用于前端回显历史）
+-- ----------------------------
+DROP TABLE IF EXISTS `agent_chat_message`;
+CREATE TABLE `agent_chat_message` (
+    `id`          bigint       NOT NULL AUTO_INCREMENT COMMENT '编号',
+    `conversation_id` varchar(64) NOT NULL               COMMENT '所属会话 ID',
+    `role`        varchar(20)  NOT NULL                  COMMENT '角色：user / assistant',
+    `content`     mediumtext   NOT NULL                  COMMENT '消息内容',
+    `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_conversation` (`conversation_id`)
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'AI 对话历史消息';
+
+-- ----------------------------
+-- 用户表（注册登录，用于业务数据按用户隔离）
+-- 已部署的旧库单独执行下面 CREATE 即可
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_user`;
+CREATE TABLE `sys_user` (
+    `id`          bigint       NOT NULL AUTO_INCREMENT COMMENT '编号',
+    `username`    varchar(64)  NOT NULL                  COMMENT '登录用户名',
+    `password`    varchar(100) NOT NULL                  COMMENT '密码（BCrypt 加密）',
+    `nickname`    varchar(64)  NOT NULL DEFAULT ''       COMMENT '昵称',
+    `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `deleted`     bit(1)       NOT NULL DEFAULT b'0'     COMMENT '是否删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_username` (`username`)
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户';

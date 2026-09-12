@@ -113,6 +113,14 @@
               >
                 代码生成
               </button>
+              <button
+                class="wb-tab"
+                :class="{ 'is-active': worktab === 'manual' }"
+                :disabled="!manualReady"
+                @click="worktab = 'manual'"
+              >
+                使用说明
+              </button>
             </div>
             <el-tag
               v-if="worktab === 'design' && project?.designVersion"
@@ -128,6 +136,13 @@
             >
               代码 v{{ codeVersion }}
             </el-tag>
+            <el-tag
+              v-else-if="worktab === 'manual' && project?.manualVersion"
+              size="small"
+              class="version-tag mono"
+            >
+              使用说明 v{{ project.manualVersion }}
+            </el-tag>
           </div>
           <div class="design-head-right">
             <template v-if="worktab === 'design'">
@@ -135,6 +150,7 @@
                 v-if="project?.designContent && !generating"
                 v-model="editMode"
                 size="small"
+                :disabled="!designEditable"
               >
                 <el-radio-button label="preview">预览</el-radio-button>
                 <el-radio-button label="edit">编辑</el-radio-button>
@@ -154,6 +170,27 @@
                   size="small"
                   :icon="Download"
                   @click="handleExportDesign"
+                />
+              </el-tooltip>
+            </template>
+            <template v-else-if="worktab === 'manual'">
+              <el-button
+                v-if="!manualGenerating"
+                type="primary"
+                :icon="MagicStick"
+                @click="handleGenerateManual"
+              >
+                {{ manualContent ? '重新生成' : '生成使用说明' }}
+              </el-button>
+              <el-button v-else type="danger" plain :icon="VideoPause" @click="handleStopManual">
+                停止生成
+              </el-button>
+              <el-tooltip content="导出当前使用说明为 .md 文件" placement="top">
+                <el-button
+                  v-if="manualContent && !manualGenerating"
+                  size="small"
+                  :icon="Download"
+                  @click="handleExportManual"
                 />
               </el-tooltip>
             </template>
@@ -185,7 +222,7 @@
         </template>
 
         <!-- ===== 代码生成页签 ===== -->
-        <div v-else class="code-panel">
+        <div v-else-if="worktab === 'code'" class="code-panel">
           <!-- 工具栏：目标项目 + 操作 -->
           <div class="code-toolbar">
             <el-select
@@ -201,13 +238,25 @@
                 :value="p.name"
               >
                 <span class="project-option-name">{{ p.name }}</span>
+                <em v-if="p.example" class="project-option-example">接入示例，勿在此工作</em>
                 <span class="project-option-path">{{ p.path }}</span>
               </el-option>
             </el-select>
             <span v-if="codeVersion" class="code-regen-tip">已生成 v{{ codeVersion }}</span>
             <div class="code-toolbar-actions">
+              <el-tooltip
+                v-if="codeFinalized"
+                content="代码已定稿，不可再生成"
+                placement="top"
+              >
+                <span>
+                  <el-button type="primary" :icon="MagicStick" disabled>
+                    {{ codeVersion ? '重新生成' : '生成代码' }}
+                  </el-button>
+                </span>
+              </el-tooltip>
               <el-button
-                v-if="!codeGenerating"
+                v-else-if="!codeGenerating"
                 type="primary"
                 :icon="MagicStick"
                 :disabled="!codeTargetProject"
@@ -321,6 +370,28 @@
             </div>
           </div>
         </div>
+
+        <!-- ===== 使用说明页签（代码定稿后）===== -->
+        <div v-else class="manual-panel">
+          <!-- 生成中：AI 叙述/内容流式展示 -->
+          <div v-if="manualGenerating" class="manual-generating">
+            <div class="manual-generating-head">
+              <span class="design-typing"><span /><span /><span /></span>
+              AI 正在阅读定稿设计文档与项目代码并生成使用说明...</div>
+            <MarkdownView class="manual-preview" :content="manualContent" />
+          </div>
+          <!-- 空态 -->
+          <div v-else-if="!manualContent" class="panel-scroll empty-wrap">
+            <el-empty
+              description="点击右上角「生成使用说明」，AI 将基于定稿设计文档与目标项目代码自动生成"
+              :image-size="64"
+            />
+          </div>
+          <!-- 内容预览 -->
+          <div v-else class="panel-scroll">
+            <MarkdownView :content="manualContent" />
+          </div>
+        </div>
       </section>
     </div>
 
@@ -336,8 +407,19 @@
         :disabled="!project || generating"
       />
       <div class="review-actions">
+        <el-tooltip
+          v-if="!designEditable && !!project"
+          content="设计文档已定稿，不可再生成或修订"
+          placement="top"
+        >
+          <span>
+            <el-button type="primary" :icon="Lightning" disabled>
+              {{ designContent ? '按意见修订' : '生成设计文档' }}
+            </el-button>
+          </span>
+        </el-tooltip>
         <el-button
-          v-if="!generating"
+          v-else-if="!generating"
           type="primary"
           :icon="Lightning"
           :disabled="!project"
@@ -450,7 +532,7 @@ const showReq = ref(true) // 需求文档面板显隐（评审对照时可收起
 let abortController: AbortController | null = null // 停止生成的控制器
 
 // ===== 代码生成页签状态 =====
-const worktab = ref<'design' | 'code'>('design') // 主区页签：设计文档 / 代码生成
+const worktab = ref<'design' | 'code' | 'manual'>('design') // 主区页签：设计文档 / 代码生成 / 使用说明
 const targetProjects = ref<TargetProjectVO[]>([]) // 可选目标项目
 const codeTargetProject = ref('') // 代码生成目标项目
 const codeGenerating = ref(false) // 正在生成代码
@@ -460,10 +542,19 @@ const selectedCodePath = ref('') // 当前预览文件路径
 const codePreview = ref<string | null>(null) // 当前预览文件内容
 let codeAbortController: AbortController | null = null // 停止代码生成的控制器
 
-/** 阶段 → 步骤条序号（6 步流水线：需求录入 → 设计生成 → 评审 → 设计定稿 → 代码生成 → 使用说明） */
+// ===== 使用说明页签状态 =====
+const manualContent = ref('') // 使用说明内容（流式输出/展示共用）
+const manualGenerating = ref(false) // 正在生成使用说明
+let manualAbortController: AbortController | null = null // 停止使用说明生成的控制器
+
+/** 阶段 → 步骤条序号（6 步流水线：需求录入→设计生成→评审→设计定稿→代码生成→使用说明）
+ * 注意：stage 编号并不与步骤一一对应（“设计定稿”完成时评审也已走完），故用显式映射而非简单 +1 */
 const stageIndex = computed(() => {
   if (!project.value) return 0
-  return Math.min((project.value.stage ?? 0) + 1, 6)
+  const stage = project.value.stage ?? 0
+  // stage0需求录入→在第1步；stage2设计定稿→前4步(0~3)完成，当前第5步代码生成；全完成→6
+  const map = [1, 2, 4, 4, 5, 6]
+  return stage < map.length ? map[stage] : 6
 })
 
 /** 阶段状态文案（与后端 DevStageEnum 对应） */
@@ -496,6 +587,11 @@ const designDirty = computed(() => designContent.value !== (project.value?.desig
 /** 代码生成页签是否可用：任务存在且设计已定稿 */
 const codeReady = computed(() => {
   return !!project.value && (project.value.stage ?? 0) >= 2
+})
+
+/** 使用说明页签是否可用：任务存在且代码已定稿（stage ≥ 4） */
+const manualReady = computed(() => {
+  return !!project.value && (project.value.stage ?? 0) >= 4
 })
 
 /** 最新代码产物版本号（未生成为 undefined） */
@@ -615,6 +711,10 @@ const loadProject = async (id: number) => {
     loadSandbox(id)
   } else {
     sandboxTree.value = []
+  }
+  // 同步最新使用说明（未在生成中才覆盖，避免打断流式展示）
+  if (!manualGenerating.value) {
+    manualContent.value = project.value.manualContent ?? ''
   }
 }
 
@@ -837,6 +937,59 @@ const handleExportDesign = () => {
   // 文件名：任务名-设计文档-v版本号.md（Windows 文件名非法字符替换）
   const fileName = `${name.replace(/[\\/:*?"<>|]/g, '_')}-设计文档-v${version}.md`
   const blob = new Blob([designContent.value], { type: 'text/markdown;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  link.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success(`已导出「${fileName}」`)
+}
+
+// ===== 使用说明页签逻辑 =====
+
+/** 生成 / 重新生成使用说明（代码定稿后） */
+const handleGenerateManual = async () => {
+  if (!project.value || manualGenerating.value) return
+  manualGenerating.value = true
+  manualContent.value = ''
+  manualAbortController = new AbortController()
+  try {
+    await DevApi.generateManualStream(
+      project.value.id,
+      {
+        onData: (chunk) => {
+          manualContent.value += chunk
+        },
+        onError: (err) => {
+          if (err?.name !== 'AbortError') {
+            ElMessage.error(`使用说明生成失败：${err?.message || err}`)
+          }
+        }
+      },
+      manualAbortController
+    )
+  } finally {
+    manualGenerating.value = false
+    // 重新加载任务：获取后端落库的新版本号与阶段状态（终态 5）
+    if (project.value) {
+      await loadProject(project.value.id)
+    }
+  }
+}
+
+/** 停止使用说明生成 */
+const handleStopManual = () => {
+  manualAbortController?.abort()
+}
+
+/** 导出当前使用说明为 .md 文件 */
+const handleExportManual = () => {
+  if (!manualContent.value) return
+  const name = project.value?.name || 'manual'
+  const version = project.value?.manualVersion ?? 'draft'
+  const fileName = `${name.replace(/[\\/:*?"<>|]/g, '_')}-使用说明-v${version}.md`
+  const blob = new Blob([manualContent.value], { type: 'text/markdown;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
@@ -1292,6 +1445,16 @@ onMounted(() => {
   font-weight: 500;
 }
 
+.project-option-example {
+  margin-right: 8px;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--cf-amber);
+  background: var(--cf-amber-soft);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
 .project-option-path {
   float: right;
   font-size: 12px;
@@ -1457,6 +1620,38 @@ onMounted(() => {
   color: var(--cf-text-dim);
   white-space: pre;
   background: var(--cf-panel);
+}
+
+/* ===== 使用说明面板 ===== */
+.manual-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.manual-generating {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+
+.manual-generating-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-family: var(--cf-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--cf-accent);
+}
+
+.empty-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ===== 底栏：评审操作 ===== */

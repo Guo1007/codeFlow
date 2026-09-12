@@ -11,7 +11,7 @@ export interface SseHandlers {
 
 /**
  * 发起 SSE 流式 POST 请求（fetchEventSource 实现，支持 POST + 自定义 header）
- * 自 ruoyi-vue-pro 原型阶段迁移，去 token / tenant-id 逻辑（登录暂缓，内网演示）
+ * 登录后携带 Bearer token，供后端鉴权拦截器放行。
  *
  * @param url    接口地址（相对 BASE_URL）
  * @param body   请求体对象
@@ -26,6 +26,10 @@ export const fetchSseStream = async (
 ) => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json'
+  }
+  const token = localStorage.getItem('cf-token')
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
   }
   return fetchEventSource(`${BASE_URL}${url}`, {
     method: 'post',

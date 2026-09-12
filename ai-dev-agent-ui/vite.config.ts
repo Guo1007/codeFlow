@@ -15,7 +15,7 @@ export default defineConfig({
     proxy: {
       // 后端接口代理：避免跨域，并剥离 /api 前缀
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:1007',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }

@@ -1,6 +1,7 @@
 package com.aidev.agent.service.impl;
 
 import com.aidev.agent.common.ServiceException;
+import com.aidev.agent.common.UserContext;
 import com.aidev.agent.controller.vo.ProjectCreateReqVO;
 import com.aidev.agent.controller.vo.ProjectRespVO;
 import com.aidev.agent.controller.vo.ProjectSimpleVO;
@@ -40,7 +41,7 @@ public class DevProjectServiceImpl implements DevProjectService {
         project.setName(createReqVO.getName());
         project.setRequirementContent(createReqVO.getRequirementContent());
         project.setStage(DevStageEnum.REQUIREMENT.getStage());
-        project.setCreator("admin"); // 登录暂缓，固定值，后续接入用户体系时替换
+        project.setCreator(UserContext.getUserIdStr());
         project.setCreateTime(LocalDateTime.now());
         projectMapper.insert(project);
         return project.getId();
@@ -51,6 +52,10 @@ public class DevProjectServiceImpl implements DevProjectService {
         DevProject project = projectMapper.selectById(id);
         if (project == null) {
             throw new ServiceException("开发任务不存在");
+        }
+        // 校验归属：仅本人可访问自己的开发任务
+        if (!UserContext.getUserIdStr().equals(String.valueOf(project.getCreator()))) {
+            throw new ServiceException("无权访问该开发任务");
         }
         ProjectRespVO respVO = new ProjectRespVO();
         respVO.setId(project.getId());
@@ -71,13 +76,21 @@ public class DevProjectServiceImpl implements DevProjectService {
         if (code != null) {
             respVO.setCodeVersion(code.getVersion());
         }
+        // 附带最新使用说明，供工作台「使用说明」页签直接展示 / 导出
+        DevArtifact manual = artifactMapper.selectLatest(id, DevArtifactTypeEnum.MANUAL.getType());
+        if (manual != null) {
+            respVO.setManualContent(manual.getContent());
+            respVO.setManualVersion(manual.getVersion());
+            respVO.setManualStatus(manual.getStatus());
+        }
         return respVO;
     }
 
     @Override
     public List<ProjectSimpleVO> listProjects() {
-        // 摘要列表：只查名称/阶段/时间，不取需求文档大字段
+        // 摘要列表：只查当前用户的项目，只取名称/阶段/时间，不取需求文档大字段
         List<DevProject> projects = projectMapper.selectList(new LambdaQueryWrapper<DevProject>()
+                .eq(DevProject::getCreator, UserContext.getUserIdStr())
                 .select(DevProject::getId, DevProject::getName, DevProject::getStage, DevProject::getCreateTime)
                 .orderByDesc(DevProject::getId)
                 .last("LIMIT 50"));

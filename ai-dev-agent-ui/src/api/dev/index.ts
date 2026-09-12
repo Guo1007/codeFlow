@@ -19,6 +19,9 @@ export interface ProjectRespVO {
   designVersion?: number // 最新设计文档版本号
   designStatus?: number // 0-AI 生成 1-人工修改 2-已定稿
   codeVersion?: number // 最新代码产物版本号
+  manualContent?: string // 最新使用说明内容
+  manualVersion?: number // 最新使用说明版本号
+  manualStatus?: number // 最新使用说明状态：2-已定稿
   createTime: Date
 }
 
@@ -140,5 +143,21 @@ export const DevApi = {
     link.download = filename
     link.click()
     URL.revokeObjectURL(url)
+  },
+
+  // ===== 使用说明（代码定稿后）=====
+
+  // 流式生成使用说明：AI 基于定稿设计文档 + 目标项目代码生成 Markdown；
+  // 结束后自动落库为 MANUAL 产物并推进阶段到终态（支持重新生成，版本 +1）
+  generateManualStream: async (
+    projectId: number,
+    handlers: {
+      onData: (chunk: string, done: boolean) => void
+      onError?: (error: any) => void
+      onClose?: () => void
+    },
+    ctrl: AbortController
+  ) => {
+    return fetchSseStream('/dev/usage/generate-stream', { projectId }, handlers, ctrl)
   }
 }

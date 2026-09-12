@@ -3,6 +3,7 @@ package com.aidev.agent.config;
 import com.aidev.agent.common.ServiceException;
 import com.aidev.agent.dal.entity.AgentTargetProject;
 import com.aidev.agent.dal.mapper.AgentTargetProjectMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -124,12 +125,43 @@ public class TargetProjectRegistry {
         target.setName(name);
         target.setPath(path);
         target.setFrameworkProfile("");
+        target.setExample(false);
         synchronized (targets) {
             targets.add(target);
         }
         byName.put(name, target);
         log.info("[register][动态接入目标项目 {}，根目录 {}]", name, path);
         return target;
+    }
+
+    /**
+     * 删除一个动态接入的目标项目（物理删除数据库记录 + 移除内存注册项）。
+     * <p>
+     * 仅允许删除由对话动态注册（数据库 agent_target_project 中存在）的项目；
+     * yaml 静态配置项目（含示例项目）不可删除，直接抛出业务异常。
+     * </p>
+     *
+     * @param name 项目标识
+     */
+    public void remove(String name) {
+        if (name == null || name.isBlank()) {
+            throw new ServiceException("项目名称不能为空");
+        }
+        final String trimName = name.trim();
+        // 仅数据库动态注册的项目可删；yaml 静态/示例项目在 DB 中无对应行
+        Long count = targetProjectMapper.selectCount(new LambdaQueryWrapper<AgentTargetProject>()
+                .eq(AgentTargetProject::getName, trimName));
+        if (count == null || count == 0) {
+            throw new ServiceException("该接入项目由配置管理，不可删除：" + trimName);
+        }
+        // 物理删除（原生 SQL，绕过全局逻辑删除），并移除内存注册项
+        targetProjectMapper.physicalDeleteByName(trimName);
+        synchronized (targets) {
+            targets.removeIf(t -> t.getName().equals(trimName));
+        }
+        byName.remove(trimName);
+        profileCache.remove(trimName);
+        log.info("[remove][物理删除动态接入目标项目 {}]", trimName);
     }
 
     /**
@@ -147,6 +179,7 @@ public class TargetProjectRegistry {
                 target.setName(row.getName());
                 target.setPath(row.getPath());
                 target.setFrameworkProfile(row.getFrameworkProfile());
+                target.setExample(false);
                 synchronized (targets) {
                     targets.add(target);
                 }
